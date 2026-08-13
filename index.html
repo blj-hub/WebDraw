@@ -797,7 +797,7 @@
             updateDisplay(); clearOverlay();
         };
 
-        // --- TIMELAPSE GENERATOR ---
+        // --- TIMELAPSE GENERATOR (WITH EXPORT & DURATION) ---
         document.getElementById('btn-timelapse').onclick = () => {
             let timeline = [];
             for (let l of layers) {
@@ -807,30 +807,75 @@
             if (timeline.length === 0) { alert("No drawing history found to replay."); return; }
             timeline.sort((a, b) => a.cmd.time - b.cmd.time);
 
+            // 1. Ask the user how long they want the video to be
+            let durationStr = prompt("Enter desired video duration in seconds (e.g., 5, 10, 30):", "5");
+            if (!durationStr) return; // User cancelled
+            let duration = parseFloat(durationStr) || 5;
+
+            // 2. Set up the Video Recorder (recording at 30 FPS)
+            const stream = mainCanvas.captureStream(30); 
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+            recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+            
+            // 3. When recording stops, package it into a file and download it
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'WebStudioPaint_Timelapse.webm'; // File name
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+
             // Hide normal layers, prep UI
             timelapseOverlay.style.display = 'flex';
+            timelapseOverlay.innerHTML = '<div>🎬 Recording & Exporting Timelapse...</div>';
             for (let l of layers) if(!l.isFolder && !l.isText) l.ctx.clearRect(0,0,WIDTH,HEIGHT);
             updateDisplay();
 
+            // Start recording!
+            recorder.start();
+
+            // 4. Calculate how many strokes to draw per frame to fit the time limit
+            const targetFPS = 30;
+            const totalFrames = duration * targetFPS;
+            const commandsPerFrame = Math.max(1, Math.ceil(timeline.length / totalFrames));
+            
             let i = 0;
             function renderFrame() {
+                let cmdsProcessed = 0;
+                // Draw a batch of commands for this single frame
+                while (i < timeline.length && cmdsProcessed < commandsPerFrame) {
+                    const step = timeline[i];
+                    executeCommand(step.layer.ctx, step.cmd);
+                    i++;
+                    cmdsProcessed++;
+                }
+                
+                updateDisplay();
+
+                // If we finished drawing all commands
                 if (i >= timeline.length) {
                     setTimeout(() => {
+                        recorder.stop(); // Stop the video recording
                         timelapseOverlay.style.display = 'none';
+                        timelapseOverlay.innerHTML = '<div>🎬 Rendering Timelapse...</div>'; // Reset text
                         for (let l of layers) if(!l.isFolder && !l.isText) l.redrawAll();
                         updateDisplay();
-                    }, 1000);
+                    }, 1000); // Wait 1 second at the end so the final image lingers
                     return;
                 }
-                const step = timeline[i];
-                executeCommand(step.layer.ctx, step.cmd);
-                updateDisplay();
-                i++;
-                requestAnimationFrame(renderFrame);
+                
+                // Force the browser to wait ~33ms between frames to capture actual video time
+                setTimeout(() => requestAnimationFrame(renderFrame), 1000 / targetFPS);
             }
             requestAnimationFrame(renderFrame);
         };
-
+		
         // --- UNIFIED RENDERING PIPELINE ---
         function updateDisplay() {
             mainCtx.clearRect(0, 0, WIDTH, HEIGHT);
