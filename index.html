@@ -9,7 +9,8 @@
         body { margin: 0; background: #2a2a2a; color: #d1d1d1; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; overflow: hidden; overscroll-behavior: none; }
 
         /* Left Toolbar */
-        .toolbar { width: 55px; background: #383838; padding: 10px 5px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #1a1a1a; z-index: 10; overflow-y: auto; }
+        .toolbar { width: 100px; background: #383838; padding: 10px 5px; display: flex; flex-direction: row; gap: 5px; border-right: 1px solid #1a1a1a; z-index: 10; overflow-y: auto; }
+        .toolbar-col { display: flex; flex-direction: column; gap: 8px; flex: 1; }
         .tool-btn { background: #4a4a4a; border: 1px solid #333; color: #ccc; padding: 10px 0; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .tool-btn:hover { background: #555; }
         .tool-btn.active { background: #5c9cfa; color: white; border-color: #2b7af9; }
@@ -80,45 +81,73 @@
         .layer-master-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         .layer-master-controls button { padding: 6px; background: #4a4a4a; border: 1px solid #333; color: white; cursor: pointer; border-radius: 4px; font-size: 12px; font-weight: bold;}
         
+		/* Alternative Layout State */
+        body.alt-layout .workspace { order: 1; }
+        body.alt-layout .toolbar { order: 2; border-right: none; border-left: 1px solid #1a1a1a; }
+        body.alt-layout .properties-panel { order: 3; }
+		
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            .toolbar { width: 100%; flex-direction: row; height: 60px; overflow-x: auto; border-right: none; border-bottom: 1px solid #1a1a1a; }
+            .toolbar { width: 100%; flex-direction: row; height: 60px; overflow-x: auto; border-right: none; border-bottom: 1px solid #1a1a1a; padding: 5px; }
+            .toolbar-col { display: flex; flex-direction: row; gap: 5px; }
             .tool-btn { padding: 0 15px; flex-shrink: 0; }
             .properties-panel { width: 100%; height: 250px; border-left: none; border-top: 1px solid #1a1a1a; }
+            
+            /* Mobile Alternative Layout */
+            body.alt-layout .workspace { order: 1; }
+            body.alt-layout .toolbar { order: 2; border-bottom: none; border-top: 1px solid #1a1a1a; }
+            body.alt-layout .properties-panel { order: 3; border-top: none; }
         }
+		
+		/* UI Lock State */
+        body.ui-locked .properties-panel { pointer-events: none; opacity: 0.5; overflow: hidden; }
+        body.ui-locked .toolbar .tool-btn:not(#btn-lock),
+        body.ui-locked .toolbar .divider { pointer-events: none; opacity: 0.5; }
+        body.ui-locked .toolbar { overflow: hidden; }
+		
     </style>
 </head>
 <body>
 
     <div class="toolbar">
-        <button class="tool-btn active" id="btn-brush" title="Brush (B)">B</button>
-        <button class="tool-btn" id="btn-eraser" title="Eraser (E)">E</button>
-        <button class="tool-btn" id="btn-picker" title="Eyedropper (I)">I</button>
-        <div class="divider"></div>
-        <button class="tool-btn" id="btn-line" title="Line">╱</button>
-        <button class="tool-btn" id="btn-polyline" title="Polyline">◿</button>
-        <button class="tool-btn" id="btn-rect" title="Rectangle">◻</button>
-        <button class="tool-btn" id="btn-ellipse" title="Ellipse">◯</button>
-        <button class="tool-btn" id="btn-polygon" title="Polygon">⬠</button>
-        <button class="tool-btn" id="btn-text" title="Text (T)">T</button>
-        <div class="divider"></div>
-        <button class="tool-btn" id="btn-marquee" title="Marquee (M)">M</button>
-        <button class="tool-btn" id="btn-lasso" title="Lasso (L)">➰</button>
-        <button class="tool-btn" id="btn-transform" title="Transform (V)">⧉</button>
-        <button class="tool-btn" id="btn-ruler" title="Place Ruler">📐</button>
-        <button class="tool-btn" id="btn-hand" title="Hand Tool (Space)">✋</button>
-        <div class="divider"></div>
-        <button class="tool-btn action-btn" id="btn-cut" title="Cut (Ctrl+X)">✂️</button>
-        <button class="tool-btn action-btn" id="btn-copy" title="Copy (Ctrl+C)">📄</button>
-        <button class="tool-btn action-btn" id="btn-paste" title="Paste (Ctrl+V)">📋</button>
-        <div class="divider"></div>
-        <button class="tool-btn action-btn timelapse-btn" id="btn-timelapse" title="Play Timelapse">🎥</button>
-        <div class="divider"></div>
-        <button class="tool-btn zoom-btn" id="btn-zoom-in">🔍+</button>
-        <button class="tool-btn zoom-btn" id="btn-zoom-out">🔍-</button>
-        <button class="tool-btn zoom-btn" id="btn-zoom-reset">100%</button>
-        <div class="divider" style="margin-top: auto;"></div>
-        <button class="tool-btn action-btn" id="btn-undo" title="Undo (Ctrl+Z)">↶</button>
+        <!-- LEFT COLUMN -->
+        <div class="toolbar-col">
+            <button class="tool-btn action-btn" id="btn-lock" title="Lock UI">🔓</button>
+            <button class="tool-btn action-btn" id="btn-undo" title="Undo (Ctrl+Z)">↶</button>
+			<button class="tool-btn action-btn" id="btn-redo" title="Redo (Ctrl+Y)">↷</button>
+            <div class="divider"></div>
+            <button class="tool-btn" id="btn-hand" title="Hand Tool (Space)">✋</button>
+            <button class="tool-btn zoom-btn" id="btn-zoom-reset">100%</button>
+            <button class="tool-btn zoom-btn" id="btn-zoom-in">🔍+</button>
+            <button class="tool-btn zoom-btn" id="btn-zoom-out">🔍-</button>
+            <div class="divider"></div>
+            <button class="tool-btn" id="btn-marquee" title="Marquee (M)">M</button>
+            <button class="tool-btn" id="btn-lasso" title="Lasso (L)">➰</button>
+            <button class="tool-btn" id="btn-transform" title="Transform (V)">⧉</button>
+            <button class="tool-btn" id="btn-ruler" title="Place Ruler">📐</button>
+            <div class="divider"></div>
+            <button class="tool-btn action-btn" id="btn-cut" title="Cut (Ctrl+X)">✂️</button>
+            <button class="tool-btn action-btn" id="btn-copy" title="Copy (Ctrl+C)">📄</button>
+            <button class="tool-btn action-btn" id="btn-paste" title="Paste (Ctrl+V)">📋</button>
+            <div class="divider"></div>
+            <button class="tool-btn action-btn timelapse-btn" id="btn-timelapse" title="Play Timelapse">🎥</button>
+			<div class="divider"></div>
+            <button class="tool-btn action-btn" id="btn-layout" title="Toggle Layout">📱</button>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="toolbar-col">
+            <button class="tool-btn active" id="btn-brush" title="Brush (B)">B</button>
+            <button class="tool-btn" id="btn-eraser" title="Eraser (E)">E</button>
+            <button class="tool-btn" id="btn-picker" title="Eyedropper (I)">I</button>
+            <div class="divider"></div>
+            <button class="tool-btn" id="btn-line" title="Line">╱</button>
+            <button class="tool-btn" id="btn-polyline" title="Polyline">◿</button>
+            <button class="tool-btn" id="btn-rect" title="Rectangle">◻</button>
+            <button class="tool-btn" id="btn-ellipse" title="Ellipse">◯</button>
+            <button class="tool-btn" id="btn-polygon" title="Polygon">⬠</button>
+            <button class="tool-btn" id="btn-text" title="Text (T)">T</button>
+        </div>
     </div>
 
     <div class="workspace" id="workspace">
@@ -175,8 +204,8 @@
         <div class="panel-section">
             <h3>Tool Settings</h3>
             <div id="settings-general">
-                <div class="tool-setting-row" style="color: #f9c22b;">
-                    <input type="checkbox" id="setting-crisp"> <label for="setting-crisp">Pixel Crisp Edges</label>
+                <div class="tool-setting-row">
+                    <input type="checkbox" id="setting-crisp" style="accent-color: #f9c22b;"> <label for="setting-crisp">Pixel Crisp Edges</label>
                 </div>
                 <div class="tool-setting-row"><input type="checkbox" id="setting-constrain"> <label for="setting-constrain">Constrain 1:1 (Shift)</label></div>
                 <div class="tool-setting-row" style="margin-top: 10px;">
@@ -207,8 +236,9 @@
 
         <div class="panel-section">
             <h3>Guides & Grid</h3>
-            <div class="tool-setting-row"><input type="checkbox" id="setting-show-grid"> <label for="setting-show-grid">Show Grid</label></div>
-            <div class="tool-setting-row"><input type="checkbox" id="setting-snap-grid"> <label for="setting-snap-grid">Snap to Grid</label></div>
+			<div class="tool-setting-row"><input type="checkbox" id="setting-show-grid"> <label for="setting-show-grid">Square Grid</label></div>
+            <div class="tool-setting-row"><input type="checkbox" id="setting-iso-grid"> <label for="setting-iso-grid">Isometric Grid</label></div>
+            <div class="tool-setting-row"><input type="checkbox" id="setting-dim-grid"> <label for="setting-dim-grid">Dimetric Grid</label></div>            <div class="tool-setting-row"><input type="checkbox" id="setting-snap-grid"> <label for="setting-snap-grid">Snap to Grid</label></div>
             <div class="tool-setting-row"><input type="checkbox" id="setting-snap-ruler" checked> <label for="setting-snap-ruler">Snap to Rulers</label></div>
             
             <div class="tool-setting-row" style="margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">
@@ -225,13 +255,13 @@
         </div>
 
         <div class="panel-section">
-            <h3>Color & Size (<span id="size-label">20</span>px)</h3>
+            <h3>Color & Size (<span id="size-label">3</span>px)</h3>
             <div class="color-row">
                 <input type="color" id="color-picker" value="#000000">
                 <input type="text" id="hex-input" value="#000000" maxlength="7" style="width: 75px; text-transform: uppercase; font-family: monospace; text-align: center;" title="Hex Color Code">
             </div>
             <div class="swatch-grid" id="swatch-grid"></div>
-            <input type="range" id="size-picker" min="1" max="150" value="20">
+            <input type="range" id="size-picker" min="1" max="150" value="3">
             <div class="size-presets" id="size-presets">
                 <button class="size-btn" data-size="3">3</button>
                 <button class="size-btn" data-size="8">8</button>
@@ -301,8 +331,10 @@
         
         const effectOutline = document.getElementById('effect-outline'); const effectOutlineColor = document.getElementById('effect-outline-color'); const effectOutlineWidth = document.getElementById('effect-outline-width');
         
-        const settingShowGrid = document.getElementById('setting-show-grid'); const settingSnapGrid = document.getElementById('setting-snap-grid');
-        const gridW = document.getElementById('grid-w'); const gridH = document.getElementById('grid-h'); const gridOx = document.getElementById('grid-ox'); const gridOy = document.getElementById('grid-oy');
+		const settingShowGrid = document.getElementById('setting-show-grid'); 
+        const settingIsoGrid = document.getElementById('setting-iso-grid'); 
+        const settingDimGrid = document.getElementById('setting-dim-grid');
+        const settingSnapGrid = document.getElementById('setting-snap-grid');        const gridW = document.getElementById('grid-w'); const gridH = document.getElementById('grid-h'); const gridOx = document.getElementById('grid-ox'); const gridOy = document.getElementById('grid-oy');
         const settingSnapRuler = document.getElementById('setting-snap-ruler'); const settingSnapEdge = document.getElementById('setting-snap-edge');
         
         const btnCommitPoly = document.getElementById('btn-commit-poly'); const btnCommitTransform = document.getElementById('btn-commit-transform');
@@ -343,8 +375,10 @@
         });
 
         // --- GRID / RULER SYSTEM (WITH FIXED HYSTERESIS) ---
-        [settingShowGrid, gridW, gridH, gridOx, gridOy].forEach(el => el.addEventListener('input', clearOverlay));
-        document.getElementById('btn-clear-ruler').onclick = () => { rulers = []; clearOverlay(); };
+		settingShowGrid.addEventListener('change', (e) => { if(e.target.checked) { settingIsoGrid.checked = false; settingDimGrid.checked = false; } clearOverlay(); });
+        settingIsoGrid.addEventListener('change', (e) => { if(e.target.checked) { settingShowGrid.checked = false; settingDimGrid.checked = false; } clearOverlay(); });
+        settingDimGrid.addEventListener('change', (e) => { if(e.target.checked) { settingShowGrid.checked = false; settingIsoGrid.checked = false; } clearOverlay(); });
+        [gridW, gridH, gridOx, gridOy].forEach(el => el.addEventListener('input', clearOverlay));        document.getElementById('btn-clear-ruler').onclick = () => { rulers = []; clearOverlay(); };
 
         function applySnap(pos, originalPos, isDrawing = false, customRadius = null) {
             let p = { ...pos };
@@ -379,52 +413,86 @@
                 } else { lastSnapRuler = null; }
             }
             
-            if (settingSnapGrid.checked) {
+            if (settingSnapGrid.checked && (settingShowGrid.checked || settingIsoGrid.checked || settingDimGrid.checked)) {
                 const sx = Math.max(1, parseInt(gridW.value) || 50); const sy = Math.max(1, parseInt(gridH.value) || 50);
                 const ox = parseInt(gridOx.value) || 0; const oy = parseInt(gridOy.value) || 0;
                 
-                let nearestX = Math.round((p.x - ox) / sx) * sx + ox; let nearestY = Math.round((p.y - oy) / sy) * sy + oy;
-                let distToNode = Math.hypot(p.x - nearestX, p.y - nearestY);
+                let nx, ny; let dNode = Infinity; let axesProj = [];
+                
+                if (settingShowGrid.checked) {
+                    nx = Math.round((p.x - ox) / sx) * sx + ox; ny = Math.round((p.y - oy) / sy) * sy + oy;
+                    dNode = Math.hypot(p.x - nx, p.y - ny);
+                    axesProj.push({ axis: 'x', dist: Math.abs(p.x - nx), px: nx, py: p.y, side: originalPos.x >= nx ? 1 : -1 });
+                    axesProj.push({ axis: 'y', dist: Math.abs(p.y - ny), px: p.x, py: ny, side: originalPos.y >= ny ? 1 : -1 });
+                } else {
+                    let alpha = settingIsoGrid.checked ? (30 * Math.PI / 180) : Math.atan(0.5);
+                    let dx = sx * Math.cos(alpha); let dy = sy * Math.sin(alpha); let m = dy / dx;
 
-                if (lastSnapNode && lastSnapNode.x === nearestX && lastSnapNode.y === nearestY) {
-                    if (distToNode < nodeBreakaway) {
-                        p.x = nearestX; p.y = nearestY;
+                    let u = Math.round(((p.x - ox)/dx + (p.y - oy)/dy) / 2);
+                    let v = Math.round(((p.y - oy)/dy - (p.x - ox)/dx) / 2);
+                    nx = ox + (u - v) * dx; ny = oy + (u + v) * dy;
+                    dNode = Math.hypot(p.x - nx, p.y - ny);
+
+                    let cx1 = ox + Math.round((p.x - ox) / dx) * dx;
+                    axesProj.push({ axis: 'vert', dist: Math.abs(p.x - cx1), px: cx1, py: p.y, side: originalPos.x >= cx1 ? 1 : -1 });
+
+                    let j_down = Math.round((p.y - oy - m*(p.x - ox)) / (2 * dy));
+                    let c_down = oy - m*ox + j_down * 2 * dy;
+                    let A2 = -m, B2 = 1, C2 = -c_down;
+                    let dist2 = Math.abs(A2*p.x + B2*p.y + C2) / Math.sqrt(A2*A2 + B2*B2);
+                    let px2 = p.x - A2*(A2*p.x + B2*p.y + C2)/(A2*A2+B2*B2);
+                    let py2 = p.y - B2*(A2*p.x + B2*p.y + C2)/(A2*A2+B2*B2);
+                    axesProj.push({ axis: 'down', dist: dist2, px: px2, py: py2, side: (A2*originalPos.x + B2*originalPos.y + C2) >= 0 ? 1 : -1 });
+
+                    let j_up = Math.round((p.y - oy + m*(p.x - ox)) / (2 * dy));
+                    let c_up = oy + m*ox + j_up * 2 * dy;
+                    let A3 = m, B3 = 1, C3 = -c_up;
+                    let dist3 = Math.abs(A3*p.x + B3*p.y + C3) / Math.sqrt(A3*A3 + B3*B3);
+                    let px3 = p.x - A3*(A3*p.x + B3*p.y + C3)/(A3*A3+B3*B3);
+                    let py3 = p.y - B3*(A3*p.x + B3*p.y + C3)/(A3*A3+B3*B3);
+                    axesProj.push({ axis: 'up', dist: dist3, px: px3, py: py3, side: (A3*originalPos.x + B3*originalPos.y + C3) >= 0 ? 1 : -1 });
+                }
+
+                if (isTransform) {
+                    let bestAxis = axesProj.reduce((min, a) => a.dist < min.dist ? a : min, axesProj[0]);
+                    if (bestAxis.dist < snapDist) { p.x = bestAxis.px; p.y = bestAxis.py; }
+                    return p;
+                }
+
+                const nodeDeadzone = 30 / scale; const nodeBreakaway = 50 / scale;
+                if (lastSnapNode && lastSnapNode.x === nx && lastSnapNode.y === ny) {
+                    if (dNode < nodeBreakaway) {
+                        p.x = nx; p.y = ny;
                         if (settingSnapEdge.checked && radius > 0) { p.x += lastSnapNode.qx * radius; p.y += lastSnapNode.qy * radius; }
                         return p;
                     } else { lastSnapNode = null; } 
                 }
 
-                if (distToNode < nodeDeadzone) {
-                    lastSnapNode = { x: nearestX, y: nearestY, qx: originalPos.x >= nearestX ? 1 : -1, qy: originalPos.y >= nearestY ? 1 : -1 };
-                    p.x = nearestX; p.y = nearestY;
+                if (dNode < nodeDeadzone) {
+                    lastSnapNode = { x: nx, y: ny, qx: originalPos.x >= nx ? 1 : -1, qy: originalPos.y >= ny ? 1 : -1 };
+                    p.x = nx; p.y = ny;
                     if (settingSnapEdge.checked && radius > 0) { p.x += lastSnapNode.qx * radius; p.y += lastSnapNode.qy * radius; }
                     return p;
                 }
 
-                let diffX = Math.abs(p.x - nearestX); 
-                let diffY = Math.abs(p.y - nearestY);
-                let activeDistX = diffX; 
-                let activeDistY = diffY;
+                for (let a of axesProj) { if (lastSnapAxis === a.axis) a.dist -= snapDist * 2; }
+                let bestAxis = axesProj.reduce((min, a) => a.dist < min.dist ? a : min, axesProj[0]);
 
-                if (lastSnapAxis === 'x') activeDistX -= snapDist * 2; 
-                if (lastSnapAxis === 'y') activeDistY -= snapDist * 2;
-
-                if (activeDistX < activeDistY && activeDistX < snapDist) {
-                    p.x = nearestX;
-                    if (settingSnapEdge.checked && radius > 0) { 
-                        let side = (originalPos.x >= nearestX ? 1 : -1); 
-                        if (lastSnapAxis === 'x' && lastSnapSide !== null) side = lastSnapSide; 
-                        p.x += side * radius; lastSnapSide = side; 
+                if (bestAxis.dist < snapDist) {
+                    p.x = bestAxis.px; p.y = bestAxis.py; let side = bestAxis.side;
+                    if (lastSnapAxis === bestAxis.axis && lastSnapSide !== null) side = lastSnapSide;
+                    
+                    if (settingSnapEdge.checked && radius > 0) {
+                        if (bestAxis.axis === 'x' || bestAxis.axis === 'vert') p.x += side * radius;
+                        else if (bestAxis.axis === 'y') p.y += side * radius;
+                        else {
+                            let alpha = settingIsoGrid.checked ? (30 * Math.PI / 180) : Math.atan(0.5);
+                            let m = Math.tan(alpha); let denom = Math.sqrt(m*m + 1);
+                            let nx_dir = bestAxis.axis === 'down' ? -m/denom : m/denom;
+                            p.x += side * nx_dir * radius; p.y += side * (1/denom) * radius;
+                        }
                     }
-                    lastSnapAxis = 'x';
-                } else if (activeDistY <= activeDistX && activeDistY < snapDist) {
-                    p.y = nearestY;
-                    if (settingSnapEdge.checked && radius > 0) { 
-                        let side = (originalPos.y >= nearestY ? 1 : -1); 
-                        if (lastSnapAxis === 'y' && lastSnapSide !== null) side = lastSnapSide; 
-                        p.y += side * radius; lastSnapSide = side; 
-                    }
-                    lastSnapAxis = 'y';
+                    lastSnapAxis = bestAxis.axis; lastSnapSide = side;
                 } else { lastSnapAxis = null; lastSnapSide = null; }
             }
             return p;
@@ -570,6 +638,7 @@
                 this.color = this.isFolder ? '#f9c22b' : 'transparent'; 
                 
                 this.commands = []; // EVENT HISTORY
+                this.redoHistory = []; // REDO HISTORY				
 
                 if (!this.isFolder) {
                     this.canvas = document.createElement('canvas'); this.canvas.width = WIDTH; this.canvas.height = HEIGHT;
@@ -591,7 +660,12 @@
                 this.ctx.restore(); updateDisplay();
             }
 
-            saveCommand(cmd) { if (!this.isFolder) this.commands.push(cmd); }
+            saveCommand(cmd) { 
+                if (!this.isFolder) { 
+                    this.commands.push(cmd); 
+                    this.redoHistory = []; // Clear redo futures on new action
+                } 
+            }
             
             redrawAll() {
                 if (this.isFolder || this.isText) return;
@@ -600,10 +674,18 @@
             }
 
             undo() {
-                if (this.isFolder) return;
-                if (this.isText) { /* Text undo logic omitted for brevity, handled by UI edits */ return; }
+                if (this.isFolder || this.isText) return; 
                 if (this.commands.length > 0) {
-                    this.commands.pop();
+                    this.redoHistory.push(this.commands.pop());
+                    this.redrawAll();
+                    updateDisplay();
+                }
+            }
+
+            redo() {
+                if (this.isFolder || this.isText) return;
+                if (this.redoHistory.length > 0) {
+                    this.commands.push(this.redoHistory.pop());
                     this.redrawAll();
                     updateDisplay();
                 }
@@ -1015,6 +1097,27 @@
         
         ['brush', 'eraser', 'picker', 'line', 'polyline', 'rect', 'ellipse', 'polygon', 'text', 'marquee', 'lasso', 'transform', 'ruler', 'hand'].forEach(tool => { document.getElementById(`btn-${tool}`).onclick = () => setActiveTool(tool); });
         document.getElementById('btn-undo').onclick = () => layers[activeLayerIndex].undo();
+        document.getElementById('btn-redo').onclick = () => layers[activeLayerIndex].redo();
+		
+		let uiLocked = false;
+        const btnLock = document.getElementById('btn-lock');
+        btnLock.onclick = () => {
+            uiLocked = !uiLocked;
+            document.body.classList.toggle('ui-locked', uiLocked);
+            btnLock.textContent = uiLocked ? '🔒' : '🔓';
+            btnLock.style.backgroundColor = uiLocked ? '#8a3a3a' : '';
+        };
+		
+		let isAltLayout = false;
+        const btnLayout = document.getElementById('btn-layout');
+        btnLayout.onclick = () => {
+            if(uiLocked) return; // Prevent toggling if UI is locked
+            isAltLayout = !isAltLayout;
+            document.body.classList.toggle('alt-layout', isAltLayout);
+            btnLayout.style.backgroundColor = isAltLayout ? '#5c9cfa' : '';
+            // Force a canvas resize event so the drawing coordinates sync with the new DOM position
+            window.dispatchEvent(new Event('resize')); 
+        };
 
         function applyContextSettings(ctx) { 
             ctx.lineWidth = parseInt(sizePicker.value); ctx.strokeStyle = colorPicker.value; ctx.fillStyle = colorPicker.value; 
@@ -1106,12 +1209,26 @@
         function clearOverlay() {
             overlayCtx.clearRect(0, 0, WIDTH, HEIGHT);
             
-            if (settingShowGrid.checked) {
+            if (settingShowGrid.checked || settingIsoGrid.checked || settingDimGrid.checked) {
                 const sx = Math.max(5, parseInt(gridW.value) || 50); const sy = Math.max(5, parseInt(gridH.value) || 50); const ox = parseInt(gridOx.value) || 0; const oy = parseInt(gridOy.value) || 0;
                 overlayCtx.save(); overlayCtx.strokeStyle = 'rgba(0, 200, 255, 0.4)'; overlayCtx.lineWidth = Math.max(0.2, 1.5 / scale); 
                 overlayCtx.beginPath();
-                for (let x = ox % sx; x < WIDTH; x += sx) { overlayCtx.moveTo(x, 0); overlayCtx.lineTo(x, HEIGHT); }
-                for (let y = oy % sy; y < HEIGHT; y += sy) { overlayCtx.moveTo(0, y); overlayCtx.lineTo(WIDTH, y); }
+                
+                if (settingShowGrid.checked) {
+                    for (let x = ox % sx; x < WIDTH; x += sx) { overlayCtx.moveTo(x, 0); overlayCtx.lineTo(x, HEIGHT); }
+                    for (let y = oy % sy; y < HEIGHT; y += sy) { overlayCtx.moveTo(0, y); overlayCtx.lineTo(WIDTH, y); }
+                } else {
+                    let alpha = settingIsoGrid.checked ? (30 * Math.PI / 180) : Math.atan(0.5);
+                    let dx = sx * Math.cos(alpha); let dy = sy * Math.sin(alpha); let m = dy / dx;
+
+                    for (let x = (ox % dx + dx) % dx; x < WIDTH; x += dx) { overlayCtx.moveTo(x, 0); overlayCtx.lineTo(x, HEIGHT); }
+                    let startJ = Math.floor((-HEIGHT - m*WIDTH - oy) / (2*dy)) - 2; let endJ = Math.ceil((HEIGHT + m*WIDTH - oy) / (2*dy)) + 2;
+                    for (let j = startJ; j <= endJ; j++) {
+                        let baseY = oy + j * 2 * dy;
+                        overlayCtx.moveTo(0, m*(0 - ox) + baseY); overlayCtx.lineTo(WIDTH, m*(WIDTH - ox) + baseY);
+                        overlayCtx.moveTo(0, -m*(0 - ox) + baseY); overlayCtx.lineTo(WIDTH, -m*(WIDTH - ox) + baseY);
+                    }
+                }
                 overlayCtx.stroke(); overlayCtx.restore();
             }
 
@@ -1210,6 +1327,8 @@
             if (e.key === 'Shift') isShiftPressed = true;
             if (e.code === 'Space' && currentMode !== 'hand') { isSpacePressed = true; wrapper.style.cursor = 'grab'; e.preventDefault(); }
             if (e.key === 'Enter') { if (currentMode === 'polyline') commitPolyline(); if (currentMode === 'transform') commitTransform(); }
+            if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); layers[activeLayerIndex].undo(); }
+            if (e.ctrlKey && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); layers[activeLayerIndex].redo(); }
             if (e.ctrlKey && e.key.toLowerCase() === 'd') { e.preventDefault(); selection.active = false; clearOverlay(); }
             if (e.ctrlKey && e.key.toLowerCase() === 'c') performCopy();
             if (e.ctrlKey && e.key.toLowerCase() === 'x') performCut();
@@ -1232,10 +1351,18 @@
                 if (isSpacePressed || currentMode === 'hand') { singlePanStartX = e.clientX - panX; singlePanStartY = e.clientY - panY; wrapper.style.cursor = 'grabbing'; return; }
                 const pos = getCanvasPos(e); const snappedPos = applySnap(pos, pos, true);
                 if (currentMode === 'text') {
-                    if (textActive) commitText(); 
+                    if (textActive) {
+                        commitText(); 
+                        return; // Stop here! Don't instantly spawn a new text box.
+                    }
                     textX = pos.x; textY = pos.y; updateTextInputStyle();
-                    const domX = textX * scale + panX; const domY = textY * scale + panY;
-                    textInput.style.left = domX + 'px'; textInput.style.top = domY + 'px'; textInput.style.transform = `scale(${scale})`; textInput.style.display = 'block'; textInput.focus(); textActive = true; return;
+                    textInput.style.left = textX + 'px'; 
+                    textInput.style.top = textY + 'px'; 
+                    textInput.style.transform = 'none'; 
+                    textInput.style.display = 'block'; 
+                    textInput.focus(); 
+                    textActive = true; 
+                    return;
                 }
                 if (currentMode === 'picker') {
                     isInteracting = true; const pixel = mainCtx.getImageData(pos.x, pos.y, 1, 1).data;
@@ -1315,10 +1442,19 @@
 
             if (currentMode === 'transform' && transformActive) {
                 if (tMode === 'move') { 
-                    let targetTx = tStartTx + (pos.x - startX); let targetTy = tStartTy + (pos.y - startY); 
-                    const tSnap = applySnap({x: targetTx, y: targetTy}, {x: targetTx, y: targetTy}, true, 0);
-                    tx = tSnap.x; ty = tSnap.y;
-                } 
+                    let targetTx = tStartTx + (pos.x - startX); 
+                    let targetTy = tStartTy + (pos.y - startY); 
+                    if (settingSnapGrid.checked) {
+                        const sx = Math.max(1, parseInt(gridW.value) || 50); 
+                        const sy = Math.max(1, parseInt(gridH.value) || 50);
+                        const ox = parseInt(gridOx.value) || 0; 
+                        const oy = parseInt(gridOy.value) || 0;
+                        targetTx = Math.round((targetTx - ox) / sx) * sx + ox;
+                        targetTy = Math.round((targetTy - oy) / sy) * sy + oy;
+                    }
+                    tx = targetTx; 
+                    ty = targetTy;
+                }
                 else if (tMode === 'rotate') { rot = Math.atan2(pos.y - (ty + dragH/2), pos.x - (tx + dragW/2)) - tStartAngle; } 
                 else if (tMode === 'scale') { 
                     if (settingConstrain.checked || isShiftPressed) { let dist = Math.hypot(pos.x - (tx + dragW/2), pos.y - (ty + dragH/2)); sx = sy = tStartSx * (dist / tStartDist); } 
