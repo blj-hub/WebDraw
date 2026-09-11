@@ -453,11 +453,11 @@
                     axesProj.push({ axis: 'up', dist: dist3, px: px3, py: py3, side: (A3*originalPos.x + B3*originalPos.y + C3) >= 0 ? 1 : -1 });
                 }
 
-                if (isTransform) {
-                    let bestAxis = axesProj.reduce((min, a) => a.dist < min.dist ? a : min, axesProj[0]);
-                    if (bestAxis.dist < snapDist) { p.x = bestAxis.px; p.y = bestAxis.py; }
-                    return p;
-                }
+                if (transformActive) {
+				let bestAxis = axesProj.reduce((min, a) => a.dist < min.dist ? a : min, axesProj[0]);
+				if (bestAxis.dist < snapDist) { p.x = bestAxis.px; p.y = bestAxis.py; }
+				return p;
+				}
 
                 const nodeDeadzone = 30 / scale; const nodeBreakaway = 50 / scale;
                 if (lastSnapNode && lastSnapNode.x === nx && lastSnapNode.y === ny) {
