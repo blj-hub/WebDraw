@@ -6,6 +6,7 @@
     <title>Web Studio Paint - Iteration 23 (Timelapse Update)</title>
     <style>
         * { box-sizing: border-box; user-select: none; }
+        input, textarea { user-select: auto; }
         body { margin: 0; background: #2a2a2a; color: #d1d1d1; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; overflow: hidden; overscroll-behavior: none; }
 
         /* Left Toolbar */
@@ -115,6 +116,9 @@
             <button class="tool-btn action-btn" id="btn-lock" title="Lock UI">🔓</button>
             <button class="tool-btn action-btn" id="btn-undo" title="Undo (Ctrl+Z)">↶</button>
 			<button class="tool-btn action-btn" id="btn-redo" title="Redo (Ctrl+Y)">↷</button>
+			<button class="tool-btn action-btn" id="btn-save" title="Save Project">💾</button>
+			<button class="tool-btn action-btn" id="btn-load" title="Load Project">📂</button>
+			<input type="file" id="file-load-project" accept=".png" style="display:none;">
             <div class="divider"></div>
             <button class="tool-btn" id="btn-hand" title="Hand Tool (Space)">✋</button>
             <button class="tool-btn zoom-btn" id="btn-zoom-reset">100%</button>
@@ -298,7 +302,7 @@
         
         // Transform State
         let transformActive = false, tMode = null, tx = 0, ty = 0, dragW = 0, dragH = 0, sx = 1, sy = 1, rot = 0;
-        let tStartAngle = 0, tStartDist = 0, tStartSx = 1, tStartSy = 1, tStartTx = 0, tStartTy = 0;
+        let tStartAngle = 0, tStartDist = 0, tStartSx = 1, tStartSy = 1, tStartTx = 0, tStartTy = 0, origTx = 0, origTy = 0;
         let dragCanvas = document.createElement('canvas'); let dragCtx = dragCanvas.getContext('2d');
 
         // Text & Rulers
@@ -611,6 +615,34 @@
             else if (cmd.type === 'image') {
                 ctx.drawImage(cmd.imgElement, cmd.cx, cmd.cy, cmd.dw, cmd.dh);
             }
+            else if (cmd.type === 'smart-image') {
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                ctx.save();
+                ctx.translate(cmd.tx + cmd.dw/2, cmd.ty + cmd.dh/2);
+                ctx.rotate(cmd.rot);
+                ctx.scale(cmd.sx, cmd.sy);
+                ctx.drawImage(cmd.imgElement, -cmd.dw/2, -cmd.dh/2, cmd.dw, cmd.dh);
+                ctx.restore();
+            }
+			
+			else if (cmd.type === 'group-transform') {
+                ctx.save();
+                ctx.translate(cmd.tx + cmd.dragW/2, cmd.ty + cmd.dragH/2);
+                ctx.rotate(cmd.rot);
+                ctx.scale(cmd.sx, cmd.sy);
+                ctx.translate(-(cmd.origTx + cmd.dragW/2), -(cmd.origTy + cmd.dragH/2));
+                
+                if (cmd.clipPath && cmd.clipPath.length > 0) {
+                    ctx.beginPath();
+                    if(cmd.clipType === 'rect') { ctx.rect(cmd.clipPath[0].x, cmd.clipPath[0].y, cmd.clipPath[0].w, cmd.clipPath[0].h); }
+                    else { ctx.moveTo(cmd.clipPath[0].x, cmd.clipPath[0].y); for(let p of cmd.clipPath) ctx.lineTo(p.x, p.y); ctx.closePath(); }
+                    ctx.clip();
+                }
+                
+                for (let subCmd of cmd.commands) { executeCommand(ctx, subCmd); }
+                ctx.restore();
+            }
+			
             else if (cmd.type === 'cut') {
                 ctx.save();
                 if (cmd.clipPath && cmd.clipPath.length > 0) {
@@ -676,18 +708,20 @@
             undo() {
                 if (this.isFolder || this.isText) return; 
                 if (this.commands.length > 0) {
-                    this.redoHistory.push(this.commands.pop());
-                    this.redrawAll();
-                    updateDisplay();
+                    const popped = this.commands.pop();
+                    if (popped.type === 'group-transform') this.commands = [...popped.commands];
+                    this.redoHistory.push(popped);
+                    this.redrawAll(); updateDisplay();
                 }
             }
 
             redo() {
                 if (this.isFolder || this.isText) return;
                 if (this.redoHistory.length > 0) {
-                    this.commands.push(this.redoHistory.pop());
-                    this.redrawAll();
-                    updateDisplay();
+                    const popped = this.redoHistory.pop();
+                    if (popped.type === 'group-transform') this.commands = [];
+                    this.commands.push(popped);
+                    this.redrawAll(); updateDisplay();
                 }
             }
         }
@@ -1099,6 +1133,84 @@
         document.getElementById('btn-undo').onclick = () => layers[activeLayerIndex].undo();
         document.getElementById('btn-redo').onclick = () => layers[activeLayerIndex].redo();
 		
+		// --- SAVE / LOAD PROJECT (PNG POLYGLOT) ---
+document.getElementById('btn-save').onclick = () => {
+    const projectData = layers.map(layer => {
+        return {
+            id: layer.id, name: layer.name, type: layer.type, 
+            visible: layer.visible, opacity: layer.opacity, 
+            clipped: layer.clipped, parentId: layer.parentId, expanded: layer.expanded,
+            outlineEnabled: layer.outlineEnabled, outlineColor: layer.outlineColor, 
+            outlineWidth: layer.outlineWidth, timelapseExclude: layer.timelapseExclude,
+            color: layer.color, textProps: layer.textProps,
+            commands: layer.commands.map(cmd => {
+                if (cmd.type === 'image' || cmd.type === 'cut' || cmd.type === 'smart-image') {
+                    const temp = document.createElement('canvas');
+                    temp.width = cmd.bounds ? cmd.bounds.w : cmd.dw;
+                    temp.height = cmd.bounds ? cmd.bounds.h : cmd.dh;
+                    temp.getContext('2d').drawImage(cmd.imgElement || cmd.imgCanvas, 0, 0, temp.width, temp.height);
+                    return { ...cmd, imgElement: null, base64: temp.toDataURL() };
+                }
+                return cmd;
+            })
+        };
+    });
+
+    const jsonStr = JSON.stringify({ width: WIDTH, height: HEIGHT, layers: projectData });
+    
+    mainCanvas.toBlob(blobPNG => {
+        const blobJSON = new Blob(["---WSP_DATA---" + jsonStr], { type: 'text/plain' });
+        const finalBlob = new Blob([blobPNG, blobJSON], { type: 'image/png' });
+        
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(finalBlob);
+        a.download = 'project.png';
+        a.click();
+    }, 'image/png');
+};
+
+document.getElementById('btn-load').onclick = () => document.getElementById('file-load-project').click();
+document.getElementById('file-load-project').onchange = (e) => {
+    if (!e.target.files[0]) return;
+    const reader = new FileReader();
+    
+    reader.onload = async (ev) => {
+        const buffer = ev.target.result;
+        const text = new TextDecoder('utf-8').decode(buffer);
+        const splitData = text.split("---WSP_DATA---");
+        
+        if (splitData.length < 2) return alert("This is a standard PNG. No project data found.");
+        
+        const data = JSON.parse(splitData.pop());
+        document.getElementById('canvas-w').value = data.width;
+        document.getElementById('canvas-h').value = data.height;
+        document.getElementById('btn-resize').click(); 
+
+        layers = [];
+        for (const lData of data.layers) {
+            const layer = new Layer(lData.name, lData.type);
+            Object.assign(layer, lData);
+            layer.ctx = layer.isFolder || layer.isText ? null : layer.canvas.getContext('2d', { willReadFrequently: true });
+            
+            for (let cmd of layer.commands) {
+                if (cmd.base64) {
+                    await new Promise(res => {
+                        const img = new Image();
+                        img.onload = () => { cmd.imgElement = img; res(); };
+                        img.src = cmd.base64;
+                    });
+                }
+            }
+            if (!layer.isFolder && !layer.isText) layer.redrawAll();
+            if (layer.isText) layer.renderText();
+            layers.push(layer);
+        }
+        renderLayerUI(); updateDisplay();
+    };
+    reader.readAsArrayBuffer(e.target.files[0]);
+    e.target.value = '';
+};
+		
 		let uiLocked = false;
         const btnLock = document.getElementById('btn-lock');
         btnLock.onclick = () => {
@@ -1135,7 +1247,7 @@
         // --- TEXT TOOL LOGIC ---
         function styleUpdateSync() {
             if(textActive) updateTextInputStyle();
-            if(layers[activeLayerIndex] && layers[activeLayerIndex].isText) { const lp = layers[activeLayerIndex].textProps; lp.font = textFont.value; lp.bold = textIsBold; lp.italic = textIsItalic; layers[activeLayerIndex].renderText(); layers[activeLayerIndex].saveState(); }
+            if(layers[activeLayerIndex] && layers[activeLayerIndex].isText) { const lp = layers[activeLayerIndex].textProps; lp.font = textFont.value; lp.bold = textIsBold; lp.italic = textIsItalic; layers[activeLayerIndex].renderText(); }
         }
         btnTextBold.onclick = () => { textIsBold = !textIsBold; btnTextBold.classList.toggle('btn-highlight', textIsBold); styleUpdateSync(); };
         btnTextItalic.onclick = () => { textIsItalic = !textIsItalic; btnTextItalic.classList.toggle('btn-highlight', textIsItalic); styleUpdateSync(); };
@@ -1150,7 +1262,7 @@
             if (!textActive || textInput.value.trim() === '') { textActive = false; textInput.style.display = 'none'; return; }
             createLayer('text'); const layer = layers[activeLayerIndex];
             layer.textProps = { text: textInput.value, x: textX, y: textY, font: textFont.value, size: parseInt(sizePicker.value), color: colorPicker.value, bold: textIsBold, italic: textIsItalic, sx: 1, sy: 1, rot: 0, width: 0, height: 0 };
-            layer.renderText(); layer.saveState();
+            layer.renderText();
             textInput.style.display = 'none'; textInput.value = ''; textActive = false;
         }
         textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commitText(); } });
@@ -1161,6 +1273,31 @@
             if (layer.isFolder) { setActiveTool('brush'); return; }
             if (layer.isText) { dragW = layer.textProps.width; dragH = layer.textProps.height; tx = layer.textProps.x; ty = layer.textProps.y; sx = layer.textProps.sx; sy = layer.textProps.sy; rot = layer.textProps.rot; transformActive = true; clearOverlay(); updateDisplay(); return; }
 
+            layer.isSmartObject = false;
+            if (!selection.active) {
+                const hasRaster = layer.commands.some(c => !['image', 'smart-image'].includes(c.type));
+                if (!hasRaster && layer.commands.length > 0) {
+                    const smartCmd = layer.commands[layer.commands.length - 1];
+                    layer.isSmartObject = true;
+                    layer.smartCmd = smartCmd;
+                    
+                    dragW = smartCmd.dw; dragH = smartCmd.dh;
+                    origTx = smartCmd.type === 'image' ? smartCmd.cx : smartCmd.tx;
+                    origTy = smartCmd.type === 'image' ? smartCmd.cy : smartCmd.ty;
+                    tx = origTx; ty = origTy;
+                    sx = smartCmd.type === 'image' ? 1 : smartCmd.sx;
+                    sy = smartCmd.type === 'image' ? 1 : smartCmd.sy;
+                    rot = smartCmd.type === 'image' ? 0 : smartCmd.rot;
+                    
+                    dragCanvas.width = dragW; dragCanvas.height = dragH; dragCtx.clearRect(0, 0, dragW, dragH);
+                    dragCtx.drawImage(smartCmd.imgElement, 0, 0, dragW, dragH);
+                    
+                    layer.ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                    selection.active = false; transformActive = true; updateDisplay(); clearOverlay();
+                    return;
+                }
+            }
+
             let bounds = null;
             if (selection.active) { 
                 tempCtx2.clearRect(0, 0, WIDTH, HEIGHT); tempCtx2.save();
@@ -1170,7 +1307,7 @@
                 bounds = getLayerBounds(tempCanvas2); if (!bounds) { setActiveTool('brush'); return; }
             } else { bounds = getLayerBounds(layer.canvas); if (!bounds) { setActiveTool('brush'); return; } }
 
-            dragW = bounds.w; dragH = bounds.h; tx = bounds.x; ty = bounds.y; sx = 1; sy = 1; rot = 0;
+            dragW = bounds.w; dragH = bounds.h; origTx = bounds.x; origTy = bounds.y; tx = bounds.x; ty = bounds.y; sx = 1; sy = 1; rot = 0;
             dragCanvas.width = dragW; dragCanvas.height = dragH; dragCtx.clearRect(0, 0, dragW, dragH);
             
             dragCtx.save();
@@ -1191,10 +1328,29 @@
 
         function commitTransform() {
             if (!transformActive) return; const layer = layers[activeLayerIndex];
-            if (layer.isText) { transformActive = false; tMode = null; clearOverlay(); layer.saveState(); if (currentMode === 'transform') setActiveTool('brush'); return; }
+            if (layer.isText) { transformActive = false; tMode = null; clearOverlay(); if (currentMode === 'transform') setActiveTool('brush'); return; }
             
             const cPath = getSelectionClipPath();
-            layer.saveCommand({ time: Date.now(), type: 'transform', bounds: { x: tx, y: ty, w: dragW, h: dragH }, clipPath: cPath.path, clipType: cPath.type, tx: tx, ty: ty, sx: sx, sy: sy, rot: rot });
+            
+            if (layer.isSmartObject) {
+                layer.saveCommand({
+                    time: Date.now(), type: 'smart-image', imgElement: layer.smartCmd.imgElement,
+                    dw: dragW, dh: dragH, tx: tx, ty: ty, sx: sx, sy: sy, rot: rot
+                });
+                layer.isSmartObject = false;
+                layer.smartCmd = null;
+            } else if (!selection.active) {
+                const oldCommands = [...layer.commands];
+                layer.commands = [];
+                layer.saveCommand({
+                    time: Date.now(), type: 'group-transform', commands: oldCommands,
+                    origTx: origTx, origTy: origTy, dragW: dragW, dragH: dragH,
+                    tx: tx, ty: ty, sx: sx, sy: sy, rot: rot, clipPath: cPath.path, clipType: cPath.type
+                });
+            } else {
+                layer.saveCommand({ time: Date.now(), type: 'transform', bounds: { x: origTx, y: origTy, w: dragW, h: dragH }, clipPath: cPath.path, clipType: cPath.type, tx: tx, ty: ty, sx: sx, sy: sy, rot: rot });
+            }
+            
             layer.redrawAll();
             
             transformActive = false; tMode = null; updateDisplay(); clearOverlay(); 
@@ -1341,6 +1497,7 @@
         });
 
         workspace.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             activePointers.set(e.pointerId, e); resetSnapState();
             if (activePointers.size === 2) {
                 isInteracting = false; const pts = Array.from(activePointers.values()); initialPinchDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
