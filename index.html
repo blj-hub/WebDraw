@@ -7,7 +7,7 @@
     <style>
         * { box-sizing: border-box; user-select: none; }
         input, textarea { user-select: auto; }
-        body { margin: 0; background: #2a2a2a; color: #d1d1d1; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; overflow: hidden; overscroll-behavior: none; }
+        body { margin: 0; background: #2a2a2a; color: #d1d1d1; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
 
         /* Left Toolbar */
         .toolbar { width: 100px; background: #383838; padding: 10px 5px; display: flex; flex-direction: row; gap: 5px; border-right: 1px solid #1a1a1a; z-index: 10; overflow-y: auto; }
@@ -34,7 +34,7 @@
         #timelapse-overlay { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; font-size: 24px; font-weight: bold; pointer-events: all; }
 
         /* Right Panels */
-        .properties-panel { width: 280px; background: #383838; border-left: 1px solid #1a1a1a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; }
+        .properties-panel { width: 280px; background: #383838; border-left: 1px solid #1a1a1a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; padding-bottom: max(50px, env(safe-area-inset-bottom)); }
         .panel-section { padding: 12px; border-bottom: 1px solid #2a2a2a; }
         .panel-section h3 { margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase; color: #aaa; }
         
@@ -87,7 +87,7 @@
         body.alt-layout .toolbar { order: 2; border-right: none; border-left: 1px solid #1a1a1a; }
         body.alt-layout .properties-panel { order: 3; }
 		
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             body { flex-direction: column; }
             .toolbar { width: 100%; flex-direction: column; height: auto; overflow-x: auto; border-right: none; border-bottom: 1px solid #1a1a1a; padding: 8px 5px; gap: 6px; }
             .toolbar-col { display: flex; flex-direction: row; gap: 5px; min-width: max-content; }
