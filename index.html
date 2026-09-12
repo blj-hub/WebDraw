@@ -23,7 +23,7 @@
 
         /* Workspace */
         .workspace { flex: 1; background: #1e1e1e; overflow: hidden; position: relative; touch-action: none; }
-        #canvas-wrapper { position: absolute; width: 800px; height: 600px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); background: white; transform-origin: 0 0; left: 0; top: 0; }
+        #canvas-wrapper { position: absolute; width: 1400px; height: 1000px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); background: white; transform-origin: 0 0; left: 0; top: 0; }
         canvas { position: absolute; top: 0; left: 0; touch-action: none; }
         #main-canvas { z-index: 1; }
         #ui-overlay { z-index: 2; pointer-events: none; }
@@ -156,8 +156,8 @@
 
     <div class="workspace" id="workspace">
         <div id="canvas-wrapper">
-            <canvas id="main-canvas" width="800" height="600"></canvas>
-            <canvas id="ui-overlay" width="800" height="600"></canvas>
+            <canvas id="main-canvas" width="1400" height="1000"></canvas>
+			<canvas id="ui-overlay" width="1400" height="1000"></canvas>
             <input type="text" id="text-input" spellcheck="false" autocomplete="off">
         </div>
         <div id="timelapse-overlay">
@@ -250,7 +250,7 @@
             </div>
             
             <div class="row-inputs" style="font-size: 11px; color:#aaa; margin-top: 10px;">
-                W: <input type="number" id="grid-w" value="50"> H: <input type="number" id="grid-h" value="50">
+                W: <input type="number" id="grid-w" value="40"> H: <input type="number" id="grid-h" value="40">
             </div>
             <div class="row-inputs" style="font-size: 11px; color:#aaa; margin-bottom: 10px;">
                 Off X: <input type="number" id="grid-ox" value="0"> Off Y: <input type="number" id="grid-oy" value="0">
@@ -265,7 +265,10 @@
                 <input type="text" id="hex-input" value="#000000" maxlength="7" style="width: 75px; text-transform: uppercase; font-family: monospace; text-align: center;" title="Hex Color Code">
             </div>
             <div class="swatch-grid" id="swatch-grid"></div>
-            <input type="range" id="size-picker" min="1" max="150" value="3">
+            <div class="row-inputs" style="margin-bottom: 5px;">
+                <input type="range" id="size-picker" min="1" max="150" value="3" style="flex: 1; margin: 0;">
+                <input type="number" id="size-input-num" min="1" max="150" value="3" style="width: 50px; flex: none;">
+            </div>
             <div class="size-presets" id="size-presets">
                 <button class="size-btn" data-size="3">3</button>
                 <button class="size-btn" data-size="8">8</button>
@@ -274,7 +277,7 @@
                 <button class="size-btn" data-size="80">80</button>
             </div>
             <div class="row-inputs" style="margin-top: 15px; border-top: 1px solid #444; padding-top: 15px;">
-                <input type="number" id="canvas-w" value="800"> <span style="color:#aaa;">x</span> <input type="number" id="canvas-h" value="600">
+                <input type="number" id="canvas-w" value="1400"> <span style="color:#aaa;">x</span> <input type="number" id="canvas-h" value="1000">
                 <button class="btn-generic" id="btn-resize" style="width: auto;">Resize Canvas</button>
             </div>
         </div>
@@ -288,7 +291,7 @@
         const tempCanvas2 = document.createElement('canvas'); const tempCtx2 = tempCanvas2.getContext('2d');
         const transformRenderCanvas = document.createElement('canvas'); const trCtx = transformRenderCanvas.getContext('2d');
         
-        let WIDTH = 800; let HEIGHT = 600; 
+        let WIDTH = 1400; let HEIGHT = 1000; 
         tempCanvas.width = tempCanvas2.width = transformRenderCanvas.width = WIDTH; 
         tempCanvas.height = tempCanvas2.height = transformRenderCanvas.height = HEIGHT;
 
@@ -371,11 +374,7 @@
             div.onclick = () => syncColor(color); swatchGrid.appendChild(div);
         });
         document.querySelectorAll('.size-btn').forEach(btn => {
-            btn.onclick = (e) => { 
-                const s = e.target.getAttribute('data-size'); sizePicker.value = s; sizeLabel.textContent = s; 
-                if(textActive) updateTextInputStyle();
-                if(layers[activeLayerIndex] && layers[activeLayerIndex].isText) { layers[activeLayerIndex].textProps.size = s; layers[activeLayerIndex].renderText(); }
-            };
+            btn.onclick = (e) => syncSize(e.target.getAttribute('data-size'));
         });
 
         // --- GRID / RULER SYSTEM (WITH FIXED HYSTERESIS) ---
@@ -418,7 +417,7 @@
             }
             
             if (settingSnapGrid.checked && (settingShowGrid.checked || settingIsoGrid.checked || settingDimGrid.checked)) {
-                const sx = Math.max(1, parseInt(gridW.value) || 50); const sy = Math.max(1, parseInt(gridH.value) || 50);
+                const sx = Math.max(1, parseInt(gridW.value) || 40); const sy = Math.max(1, parseInt(gridH.value) || 40);
                 const ox = parseInt(gridOx.value) || 0; const oy = parseInt(gridOy.value) || 0;
                 
                 let nx, ny; let dNode = Infinity; let axesProj = [];
@@ -907,7 +906,8 @@
             
             layers.forEach(layer => {
                 if (layer.isFolder) return; 
-                layer.canvas.width = WIDTH; layer.canvas.height = HEIGHT; layer.applyContextBase();
+                layer.canvas.width = WIDTH; layer.canvas.height = HEIGHT;
+                if (layer.ctx) { layer.ctx.lineCap = 'round'; layer.ctx.lineJoin = 'round'; }
                 if (layer.isText) layer.renderText(); else layer.redrawAll();
             });
             updateDisplay(); clearOverlay();
@@ -1107,10 +1107,17 @@
         document.getElementById('btn-import-url').onclick = () => { const url = prompt("Enter image URL:"); if (url) importImage(url); };
 
         // --- TOOLS ---
-        sizePicker.addEventListener('input', (e) => { 
-            sizeLabel.textContent = e.target.value; if(textActive) updateTextInputStyle(); 
-            if(layers[activeLayerIndex] && layers[activeLayerIndex].isText) { layers[activeLayerIndex].textProps.size = e.target.value; layers[activeLayerIndex].renderText(); }
-        });
+        const sizeInputNum = document.getElementById('size-input-num');
+        function syncSize(val) {
+            let s = Math.max(1, Math.min(150, parseInt(val) || 3));
+            sizePicker.value = s; sizeInputNum.value = s; sizeLabel.textContent = s;
+            if(textActive) updateTextInputStyle(); 
+            if(layers[activeLayerIndex] && layers[activeLayerIndex].isText) { 
+                layers[activeLayerIndex].textProps.size = s; layers[activeLayerIndex].renderText(); 
+            }
+        }
+        sizePicker.addEventListener('input', (e) => syncSize(e.target.value));
+        sizeInputNum.addEventListener('input', (e) => syncSize(e.target.value));
         
         function setActiveTool(tool) {
             if (currentMode === 'polyline' && tool !== 'polyline') commitPolyline();
@@ -1366,7 +1373,7 @@ document.getElementById('file-load-project').onchange = (e) => {
             overlayCtx.clearRect(0, 0, WIDTH, HEIGHT);
             
             if (settingShowGrid.checked || settingIsoGrid.checked || settingDimGrid.checked) {
-                const sx = Math.max(5, parseInt(gridW.value) || 50); const sy = Math.max(5, parseInt(gridH.value) || 50); const ox = parseInt(gridOx.value) || 0; const oy = parseInt(gridOy.value) || 0;
+                const sx = Math.max(5, parseInt(gridW.value) || 40); const sy = Math.max(5, parseInt(gridH.value) || 40); const ox = parseInt(gridOx.value) || 0; const oy = parseInt(gridOy.value) || 0;
                 overlayCtx.save(); overlayCtx.strokeStyle = 'rgba(0, 200, 255, 0.4)'; overlayCtx.lineWidth = Math.max(0.2, 1.5 / scale); 
                 overlayCtx.beginPath();
                 
